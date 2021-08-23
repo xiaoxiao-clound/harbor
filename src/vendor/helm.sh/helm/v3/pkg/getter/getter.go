@@ -18,9 +18,11 @@ package getter
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/pkg/errors"
 
+	"helm.sh/helm/v3/internal/experimental/registry"
 	"helm.sh/helm/v3/pkg/cli"
 )
 
@@ -28,13 +30,19 @@ import (
 //
 // Getters may or may not ignore these parameters as they are passed in.
 type options struct {
-	url       string
-	certFile  string
-	keyFile   string
-	caFile    string
-	username  string
-	password  string
-	userAgent string
+	url                   string
+	certFile              string
+	keyFile               string
+	caFile                string
+	unTar                 bool
+	insecureSkipVerifyTLS bool
+	username              string
+	password              string
+	passCredentialsAll    bool
+	userAgent             string
+	version               string
+	registryClient        *registry.Client
+	timeout               time.Duration
 }
 
 // Option allows specifying various settings configurable by the user for overriding the defaults
@@ -57,10 +65,23 @@ func WithBasicAuth(username, password string) Option {
 	}
 }
 
+func WithPassCredentialsAll(pass bool) Option {
+	return func(opts *options) {
+		opts.passCredentialsAll = pass
+	}
+}
+
 // WithUserAgent sets the request's User-Agent header to use the provided agent name.
 func WithUserAgent(userAgent string) Option {
 	return func(opts *options) {
 		opts.userAgent = userAgent
+	}
+}
+
+// WithInsecureSkipVerifyTLS determines if a TLS Certificate will be checked
+func WithInsecureSkipVerifyTLS(insecureSkipVerifyTLS bool) Option {
+	return func(opts *options) {
+		opts.insecureSkipVerifyTLS = insecureSkipVerifyTLS
 	}
 }
 
@@ -70,6 +91,31 @@ func WithTLSClientConfig(certFile, keyFile, caFile string) Option {
 		opts.certFile = certFile
 		opts.keyFile = keyFile
 		opts.caFile = caFile
+	}
+}
+
+// WithTimeout sets the timeout for requests
+func WithTimeout(timeout time.Duration) Option {
+	return func(opts *options) {
+		opts.timeout = timeout
+	}
+}
+
+func WithTagName(tagname string) Option {
+	return func(opts *options) {
+		opts.version = tagname
+	}
+}
+
+func WithRegistryClient(client *registry.Client) Option {
+	return func(opts *options) {
+		opts.registryClient = client
+	}
+}
+
+func WithUntar() Option {
+	return func(opts *options) {
+		opts.unTar = true
 	}
 }
 
@@ -122,11 +168,16 @@ var httpProvider = Provider{
 	New:     NewHTTPGetter,
 }
 
+var ociProvider = Provider{
+	Schemes: []string{"oci"},
+	New:     NewOCIGetter,
+}
+
 // All finds all of the registered getters as a list of Provider instances.
 // Currently, the built-in getters and the discovered plugins with downloader
 // notations are collected.
 func All(settings *cli.EnvSettings) Providers {
-	result := Providers{httpProvider}
+	result := Providers{httpProvider, ociProvider}
 	pluginDownloaders, _ := collectPlugins(settings)
 	result = append(result, pluginDownloaders...)
 	return result

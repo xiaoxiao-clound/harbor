@@ -68,10 +68,10 @@ type UserGroup struct {
 }
 
 // ErrDuplicateProjectMember ...
-var ErrDuplicateProjectMember = errors.New("The project member specified already exist")
+var ErrDuplicateProjectMember = errors.ConflictError(nil).WithMessage("The project member specified already exist")
 
 // ErrInvalidRole ...
-var ErrInvalidRole = errors.New("Failed to update project member, role is not in 1,2,3")
+var ErrInvalidRole = errors.BadRequestError(nil).WithMessage("Failed to update project member, role is not in 1,2,3")
 
 type controller struct {
 	userManager user.Manager
@@ -174,7 +174,7 @@ func (c *controller) Create(ctx context.Context, projectNameOrID interface{}, re
 
 	}
 	if member.EntityID <= 0 {
-		return 0, fmt.Errorf("Can not get valid member entity, request: %+v", req)
+		return 0, fmt.Errorf("can not get valid member entity, request: %+v", req)
 	}
 
 	// Check if member already exist in current project

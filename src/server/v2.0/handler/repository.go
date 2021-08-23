@@ -17,9 +17,11 @@ package handler
 import (
 	"context"
 	"fmt"
+	"github.com/goharbor/harbor/src/common/security/robot"
+	robotCtr "github.com/goharbor/harbor/src/controller/robot"
+	pkgModels "github.com/goharbor/harbor/src/pkg/project/models"
 
 	"github.com/go-openapi/runtime/middleware"
-	cmodels "github.com/goharbor/harbor/src/common/models"
 	"github.com/goharbor/harbor/src/common/rbac"
 	"github.com/goharbor/harbor/src/common/security"
 	"github.com/goharbor/harbor/src/common/security/local"
@@ -31,6 +33,7 @@ import (
 	"github.com/goharbor/harbor/src/lib/log"
 	"github.com/goharbor/harbor/src/lib/q"
 	"github.com/goharbor/harbor/src/pkg/notification"
+	repomodel "github.com/goharbor/harbor/src/pkg/repository/model"
 	"github.com/goharbor/harbor/src/server/v2.0/handler/model"
 	"github.com/goharbor/harbor/src/server/v2.0/models"
 	operation "github.com/goharbor/harbor/src/server/v2.0/restapi/operations/repository"
@@ -123,6 +126,25 @@ func (r *repositoryAPI) listAuthorizedProjectIDs(ctx context.Context) ([]int64, 
 				GroupIDs:   currentUser.GroupIDs,
 				WithPublic: true,
 			}
+		case *robot.SecurityContext:
+			// for the system level robot that covers all the project, see it as the system admin.
+			var coverAll bool
+			var names []string
+			r := secCtx.(*robot.SecurityContext).User()
+			for _, p := range r.Permissions {
+				if p.Scope == robotCtr.SCOPEALLPROJECT {
+					coverAll = true
+					break
+				}
+				names = append(names, p.Namespace)
+			}
+			if !coverAll {
+				namesQuery := &pkgModels.NamesQuery{
+					Names:      names,
+					WithPublic: true,
+				}
+				query.Keywords["names"] = namesQuery
+			}
 		default:
 			query.Keywords["public"] = true
 		}
@@ -209,7 +231,7 @@ func (r *repositoryAPI) UpdateRepository(ctx context.Context, params operation.U
 	if err != nil {
 		return r.SendError(ctx, err)
 	}
-	if err := r.repoCtl.Update(ctx, &cmodels.RepoRecord{
+	if err := r.repoCtl.Update(ctx, &repomodel.RepoRecord{
 		RepositoryID: repository.RepositoryID,
 		Description:  params.Repository.Description,
 	}, "Description"); err != nil {

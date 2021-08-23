@@ -255,3 +255,29 @@ artifact-list-tab {
 .central-block-loading {
   background-color: $central-block-loading-bg-color;
 }
+.backStyle {
+  color: $back-link-color;
+}
+.back-icon {
+  color: $back-link-color;
+}
+.breadcrumb a {
+  color: $back-link-color;
+}
+.arrow-block a{
+  color: $back-link-color;
+}
+.onback {
+  color: $back-link-color;
+}
+app-tag-feature-integration {
+  .checked {
+    background-color: $radio-button-checked;
+  }
+}
+
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px $input-autofill-bg-color inset;
+  -webkit-text-fill-color: $input-autofill-color !important;
+  caret-color: $input-autofill-color
+}

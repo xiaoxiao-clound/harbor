@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"github.com/goharbor/harbor/src/lib/config/models"
 	"github.com/goharbor/harbor/src/pkg/ldap/model"
+	"net"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -53,6 +53,9 @@ var ErrInvalidFilter = errors.New("invalid filter syntax")
 // ErrEmptyBaseDN ...
 var ErrEmptyBaseDN = errors.New("empty base dn")
 
+// ErrEmptySearchDN ...
+var ErrEmptySearchDN = errors.New("empty search dn")
+
 // Session - define a LDAP session
 type Session struct {
 	basicCfg models.LdapConf
@@ -71,7 +74,6 @@ func NewSession(basicCfg models.LdapConf, groupCfg models.GroupConf) *Session {
 func formatURL(ldapURL string) (string, error) {
 
 	var protocol, hostport string
-
 	_, err := url.Parse(ldapURL)
 	if err != nil {
 		return "", fmt.Errorf("parse Ldap Host ERR: %s", err)
@@ -89,12 +91,11 @@ func formatURL(ldapURL string) (string, error) {
 	}
 
 	if strings.Contains(hostport, ":") {
-		splitHostPort := strings.Split(hostport, ":")
-		port, err := strconv.Atoi(splitHostPort[1])
+		_, port, err := net.SplitHostPort(hostport)
 		if err != nil {
-			return "", fmt.Errorf("illegal url port")
+			return "", fmt.Errorf("illegal ldap url, error: %v", err)
 		}
-		if port == 636 {
+		if port == "636" {
 			protocol = "ldaps"
 		}
 
@@ -125,7 +126,7 @@ func TestConfig(ldapConfig models.LdapConf) (bool, error) {
 	defer ts.Close()
 
 	if ts.basicCfg.SearchDn == "" {
-		return false, ErrEmptyBaseDN
+		return false, ErrEmptySearchDN
 	}
 	if err := ts.Bind(ts.basicCfg.SearchDn, ts.basicCfg.SearchPassword); err != nil {
 		if goldap.IsErrorWithCode(err, goldap.LDAPResultInvalidCredentials) {
@@ -195,9 +196,12 @@ func (s *Session) Open() error {
 		return err
 	}
 	splitLdapURL := strings.Split(ldapURL, "://")
-	protocol, hostport := splitLdapURL[0], splitLdapURL[1]
-	host := strings.Split(hostport, ":")[0]
 
+	protocol, hostport := splitLdapURL[0], splitLdapURL[1]
+	host, _, err := net.SplitHostPort(hostport)
+	if err != nil {
+		return err
+	}
 	connectionTimeout := s.basicCfg.ConnectionTimeout
 	goldap.DefaultTimeout = time.Duration(connectionTimeout) * time.Second
 

@@ -565,6 +565,16 @@ Verify Quotas Display
         Log All  storage_usage_unit:${storage_usage_unit}
         Log All  storage_total_size:${storage_total_size}
         Log All  storage_quota_ret:${storage_quota_ret}
-        Should Match Regexp  ${storage_quota_ret}  ${storage_usage_without_unit}(\\\.\\d{1,2})*${storage_usage_unit} of ${storage_total_size}
+        ${str_expected}=  Replace String  ${storage_usage_without_unit}(\\\.\\d{1,2})*${storage_usage_unit} of ${storage_total_size}  B  iB
+        Should Match Regexp  ${storage_quota_ret}  ${str_expected}
     END
     Close Browser
+
+
+Verify Re-sign Image
+    [Arguments]    ${json}
+    Log To Console  "Verify Quotas Display..."
+    @{project}=  Get Value From Json  ${json}  $.notary_projects.[*].name
+    FOR    ${project}    IN    @{project}
+        Body Of Admin Push Signed Image  ${project}  alpine  new_tag  ${HARBOR_ADMIN}  ${HARBOR_PASSWORD}  clear_trust_dir=${false}
+    END

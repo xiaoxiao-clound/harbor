@@ -66,6 +66,12 @@ func (r *replicationAPI) CreateReplicationPolicy(ctx context.Context, params ope
 		Override:          params.Policy.Override,
 		Enabled:           params.Policy.Enabled,
 	}
+	// Make this field be optional to keep backward compatibility
+	if params.Policy.DestNamespaceReplaceCount != nil {
+		policy.DestNamespaceReplaceCount = *params.Policy.DestNamespaceReplaceCount
+	} else {
+		policy.DestNamespaceReplaceCount = -1 // -1 mean the legacy mode
+	}
 	if params.Policy.SrcRegistry != nil {
 		policy.SrcRegistry = &model.Registry{
 			ID: params.Policy.SrcRegistry.ID,
@@ -79,8 +85,9 @@ func (r *replicationAPI) CreateReplicationPolicy(ctx context.Context, params ope
 	if len(params.Policy.Filters) > 0 {
 		for _, filter := range params.Policy.Filters {
 			policy.Filters = append(policy.Filters, &model.Filter{
-				Type:  filter.Type,
-				Value: filter.Value,
+				Type:       filter.Type,
+				Value:      filter.Value,
+				Decoration: filter.Decoration,
 			})
 		}
 	}
@@ -115,6 +122,13 @@ func (r *replicationAPI) UpdateReplicationPolicy(ctx context.Context, params ope
 		Override:          params.Policy.Override,
 		Enabled:           params.Policy.Enabled,
 	}
+	// Make this field be optional to keep backward compatibility
+	if params.Policy.DestNamespaceReplaceCount != nil {
+		policy.DestNamespaceReplaceCount = *params.Policy.DestNamespaceReplaceCount
+	} else {
+		policy.DestNamespaceReplaceCount = -1 // -1 mean the legacy mode
+	}
+
 	if params.Policy.SrcRegistry != nil {
 		policy.SrcRegistry = &model.Registry{
 			ID: params.Policy.SrcRegistry.ID,
@@ -128,8 +142,9 @@ func (r *replicationAPI) UpdateReplicationPolicy(ctx context.Context, params ope
 	if len(params.Policy.Filters) > 0 {
 		for _, filter := range params.Policy.Filters {
 			policy.Filters = append(policy.Filters, &model.Filter{
-				Type:  filter.Type,
-				Value: filter.Value,
+				Type:       filter.Type,
+				Value:      filter.Value,
+				Decoration: filter.Decoration,
 			})
 		}
 	}
@@ -387,17 +402,19 @@ func (r *replicationAPI) GetReplicationLog(ctx context.Context, params operation
 }
 
 func convertReplicationPolicy(policy *repctlmodel.Policy) *models.ReplicationPolicy {
+	replaceCount := policy.DestNamespaceReplaceCount
 	p := &models.ReplicationPolicy{
-		CreationTime:      strfmt.DateTime(policy.CreationTime),
-		Deletion:          policy.ReplicateDeletion,
-		Description:       policy.Description,
-		DestNamespace:     policy.DestNamespace,
-		Enabled:           policy.Enabled,
-		ID:                policy.ID,
-		Name:              policy.Name,
-		Override:          policy.Override,
-		ReplicateDeletion: policy.ReplicateDeletion,
-		UpdateTime:        strfmt.DateTime(policy.UpdateTime),
+		CreationTime:              strfmt.DateTime(policy.CreationTime),
+		Deletion:                  policy.ReplicateDeletion,
+		Description:               policy.Description,
+		DestNamespace:             policy.DestNamespace,
+		DestNamespaceReplaceCount: &replaceCount,
+		Enabled:                   policy.Enabled,
+		ID:                        policy.ID,
+		Name:                      policy.Name,
+		Override:                  policy.Override,
+		ReplicateDeletion:         policy.ReplicateDeletion,
+		UpdateTime:                strfmt.DateTime(policy.UpdateTime),
 	}
 	if policy.SrcRegistry != nil {
 		p.SrcRegistry = convertRegistry(policy.SrcRegistry)
@@ -408,8 +425,9 @@ func convertReplicationPolicy(policy *repctlmodel.Policy) *models.ReplicationPol
 	if len(policy.Filters) > 0 {
 		for _, filter := range policy.Filters {
 			p.Filters = append(p.Filters, &models.ReplicationFilter{
-				Type:  string(filter.Type),
-				Value: filter.Value,
+				Type:       string(filter.Type),
+				Value:      filter.Value,
+				Decoration: filter.Decoration,
 			})
 		}
 	}

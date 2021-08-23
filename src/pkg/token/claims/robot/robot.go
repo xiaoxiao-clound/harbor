@@ -3,8 +3,8 @@ package robot
 import (
 	"errors"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/goharbor/harbor/src/pkg/permission/types"
+	"github.com/golang-jwt/jwt"
 )
 
 // Claim implements the interface of jwt.Claims
@@ -18,13 +18,13 @@ type Claim struct {
 // Valid valid the claims "tokenID, projectID and access".
 func (rc Claim) Valid() error {
 	if rc.TokenID < 0 {
-		return errors.New("Token id must an valid INT")
+		return errors.New("token id must an valid INT")
 	}
 	if rc.ProjectID < 0 {
-		return errors.New("Project id must an valid INT")
+		return errors.New("project id must an valid INT")
 	}
 	if rc.Access == nil {
-		return errors.New("The access info cannot be nil")
+		return errors.New("the access info cannot be nil")
 	}
 	stdErr := rc.StandardClaims.Valid()
 	if stdErr != nil {

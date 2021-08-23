@@ -31,7 +31,7 @@ import (
 	"github.com/goharbor/harbor/src/pkg/usergroup"
 	"github.com/goharbor/harbor/src/pkg/usergroup/model"
 
-	gooidc "github.com/coreos/go-oidc"
+	gooidc "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/goharbor/harbor/src/common"
 	"github.com/goharbor/harbor/src/common/models"
 	"github.com/goharbor/harbor/src/lib/log"
@@ -289,8 +289,12 @@ func mergeUserInfo(remote, local *UserInfo) *UserInfo {
 		Subject: local.Subject,
 		Issuer:  local.Issuer,
 		// Used data from userinfo
-		Username: remote.Username,
-		Email:    remote.Email,
+		Email: remote.Email,
+	}
+	if remote.Username != "" {
+		res.Username = remote.Username
+	} else {
+		res.Username = local.Username
 	}
 	if remote.hasGroupClaim {
 		res.Groups = remote.Groups

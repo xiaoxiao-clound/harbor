@@ -1,13 +1,13 @@
 ARG harbor_base_image_version
 ARG harbor_base_namespace
-FROM node:15.4.0 as nodeportal
+FROM node:16.5.0 as nodeportal
 
 WORKDIR /build_dir
 
 ARG npm_registry=https://registry.npmjs.org
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python-yaml=3.12-1
+    && apt-get install -y --no-install-recommends python-yaml
 
 COPY src/portal/package.json /build_dir
 COPY src/portal/package-lock.json /build_dir
@@ -21,7 +21,7 @@ COPY src/portal /build_dir
 ENV NPM_CONFIG_REGISTRY=${npm_registry}
 RUN npm install --unsafe-perm
 RUN npm run generate-build-timestamp
-RUN node --max_old_space_size=2048 'node_modules/@angular/cli/bin/ng' build --prod
+RUN node --max_old_space_size=2048 'node_modules/@angular/cli/bin/ng' build --configuration production
 RUN python -c 'import sys, yaml, json; y=yaml.load(sys.stdin.read()); print json.dumps(y)' < swagger.yaml > dist/swagger.json
 RUN python -c 'import sys, yaml, json; y=yaml.load(sys.stdin.read()); print json.dumps(y)' < swagger2.yaml > dist/swagger2.json
 RUN python -c 'import sys, yaml, json; y=yaml.load(sys.stdin.read()); print json.dumps(y)' < swagger3.yaml > dist/swagger3.json
@@ -38,7 +38,7 @@ VOLUME /var/cache/nginx /var/log/nginx /run
 
 STOPSIGNAL SIGQUIT
 
-HEALTHCHECK CMD curl --fail -s http://127.0.0.1:8080 || curl -k --fail -s https://127.0.0.1:8443 || exit 1
+HEALTHCHECK CMD curl --fail -s http://localhost:8080 || curl -k --fail -s https://localhost:8443 || exit 1
 USER nginx
 CMD ["nginx", "-g", "daemon off;"]
 
